@@ -12,6 +12,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] float jumpForce;
     public bool canJump;
     bool jumpRequested;
+    float gravity, addedGravity;
     Rigidbody rb;
     Vector3 angularVelocity;
     Vector3 moveDirection;
@@ -19,8 +20,7 @@ public class PlayerController : MonoBehaviour
     [Header("Camera")]
     public bool isAiming;
     public Transform camOrientation; // Grab orientation for rotation
-    public Transform aimCamOrientation; // ^Same for when aiming
-    CinemachineCamera aimCam;
+    [SerializeField] CinemachineRotationComposer rotationComposer;
     float yRotation, xRotation;
     [Header("Ground Check")]
     [SerializeField] LayerMask isGround;
@@ -30,6 +30,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] float maxSlopeAngle;
     RaycastHit slopeHit;
     bool exitingSlope;
+
 
     void Awake()
     {
@@ -44,9 +45,13 @@ public class PlayerController : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
 
         rb = GetComponent<Rigidbody>();
-        aimCam = GetComponentInChildren<CinemachineCamera>();
 
-        angularVelocity = new Vector3(0f, 1f, 0f);
+        angularVelocity = new Vector3(0f, 100f, 0f);
+
+        gravity = Physics.gravity.y;
+        addedGravity = Physics.gravity.y * 4.2f;
+
+        rotationComposer.Composition.DeadZone.Enabled = true;
     }
 
     public void PlayerMove(float verticalInput, float horizontalInput)
@@ -92,6 +97,11 @@ public class PlayerController : MonoBehaviour
         if (rb.useGravity && OnSlope()) rb.useGravity = false;
         else if (!rb.useGravity && !OnSlope()) rb.useGravity = true;
 
+        if (rb.useGravity && rb.linearVelocity.y < 0f)
+        {
+            if (Physics.gravity.y != addedGravity) Physics.gravity = new Vector3(0f, addedGravity, 0f);
+        }
+
         Vector3 v = grounded ? move : new Vector3(move.x * airMult, rb.linearVelocity.y, move.z * airMult);
         rb.AddForce(v - rb.linearVelocity, ForceMode.VelocityChange);
 
@@ -106,25 +116,28 @@ public class PlayerController : MonoBehaviour
     {
         if (moveDirection != Vector3.zero && !isAiming)
         {
-            if (aimCam.Priority != 0) aimCam.Priority = 0;
-
+            if (!rotationComposer.Composition.DeadZone.Enabled) rotationComposer.Composition.DeadZone.Enabled = true;
             float angleDiff = Vector3.SignedAngle(transform.forward, moveDirection, Vector3.up);
             rb.angularVelocity = new Vector3(rb.angularVelocity.x, angleDiff * 0.15f, rb.angularVelocity.z);
         }
         else if (isAiming)
         {
+            if (rotationComposer.Composition.DeadZone.Enabled) rotationComposer.Composition.DeadZone.Enabled = false;
+
             Quaternion deltaRotation = Quaternion.Euler(angularVelocity * Time.fixedDeltaTime);
             Quaternion targetRotation = Quaternion.Euler(transform.localEulerAngles.x, Camera.main.transform.localEulerAngles.y, transform.localEulerAngles.z);
-            rb.MoveRotation(targetRotation * deltaRotation);
 
-            if (Quaternion.Angle(rb.rotation, targetRotation) <= 0.1f)
+            if (Quaternion.Angle(rb.rotation, targetRotation) > 0.1f)
             {
-                if (aimCam.Priority != 2) aimCam.Priority = 2;
+                rb.MoveRotation(targetRotation * deltaRotation);
             }
+
+            Debug.Log(rb.angularVelocity);
         }
         else
         {
-            if (aimCam.Priority != 0) aimCam.Priority = 0;
+            if (!rotationComposer.Composition.DeadZone.Enabled) rotationComposer.Composition.DeadZone.Enabled = true;
+
             rb.angularVelocity = Vector3.zero;
         }
     }
@@ -132,8 +145,9 @@ public class PlayerController : MonoBehaviour
     void GroundCheck()
     {
         // Ground check 
-        grounded = Physics.BoxCast(transform.position, transform.localScale * 0.25f, Vector3.down, out floorHit, transform.rotation, 1.2f, isGround);
-        Debug.DrawLine(transform.position, new Vector3(transform.position.x, transform.position.y - 1.2f, transform.position.z), Color.magenta);
+        grounded = Physics.BoxCast(transform.position, transform.localScale * 0.25f, Vector3.down, out floorHit, transform.rotation, 1.05f, isGround);
+        if (grounded && Physics.gravity.y != gravity) Physics.gravity = new Vector3(0f, gravity, 0f);
+        //Debug.DrawLine(transform.position, new Vector3(transform.position.x, transform.position.y - 1.2f, transform.position.z), Color.magenta);
     }
 
     public void Jump()
@@ -145,6 +159,11 @@ public class PlayerController : MonoBehaviour
             jumpRequested = true;
             Invoke(nameof(ResetJump), 0.3f);
         }
+    }
+
+    public void TakeDamage()
+    {
+        Debug.Log("YOU GOT HIT");
     }
 
     void ResetJump()
