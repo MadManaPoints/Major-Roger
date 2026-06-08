@@ -13,6 +13,7 @@ public class PlayerController : MonoBehaviour
     public bool canJump;
     bool jumpRequested;
     float gravity, addedGravity;
+    float strafeMovementAirDamp = 1f;
     Rigidbody rb;
     Vector3 angularVelocity;
     Vector3 moveDirection;
@@ -21,6 +22,7 @@ public class PlayerController : MonoBehaviour
     public bool isAiming;
     public Transform camOrientation; // Grab orientation for rotation
     [SerializeField] CinemachineRotationComposer rotationComposer;
+    [SerializeField] CinemachineBasicMultiChannelPerlin noise;
     float yRotation, xRotation;
     [Header("Ground Check")]
     [SerializeField] LayerMask isGround;
@@ -30,6 +32,10 @@ public class PlayerController : MonoBehaviour
     [SerializeField] float maxSlopeAngle;
     RaycastHit slopeHit;
     bool exitingSlope;
+    [Space(15)]
+    [Header("Other References")]
+    [SerializeField] PlayerHealth health;
+    public bool canTakeDamage = true;
 
 
     void Awake()
@@ -45,6 +51,7 @@ public class PlayerController : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
 
         rb = GetComponent<Rigidbody>();
+        health = GetComponent<PlayerHealth>();
 
         angularVelocity = new Vector3(0f, 100f, 0f);
 
@@ -60,13 +67,7 @@ public class PlayerController : MonoBehaviour
         Transform orientation = Camera.main.transform;
         orientation.localEulerAngles = new Vector3(0f, orientation.localEulerAngles.y, 0f);
 
-        // Move in direction of camera's flat orientation
         moveDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
-    }
-
-    public void PlayerRotate()
-    {
-
     }
 
     public void PlayerAim()
@@ -90,6 +91,7 @@ public class PlayerController : MonoBehaviour
     void Movement()
     {
         // Create move Vector from player inputs on X and Z axis
+        moveDirection.Normalize();
         Vector3 move = new Vector3(moveDirection.x * moveSpeed, rb.linearVelocity.y, moveDirection.z * moveSpeed);
         ///Debug.Log(move);
 
@@ -102,7 +104,7 @@ public class PlayerController : MonoBehaviour
             if (Physics.gravity.y != addedGravity) Physics.gravity = new Vector3(0f, addedGravity, 0f);
         }
 
-        Vector3 v = grounded ? move : new Vector3(move.x * airMult, rb.linearVelocity.y, move.z * airMult);
+        Vector3 v = grounded && !isAiming ? move : new Vector3(move.x * airMult, rb.linearVelocity.y, move.z * airMult);
         rb.AddForce(v - rb.linearVelocity, ForceMode.VelocityChange);
 
         if (jumpRequested)
@@ -132,7 +134,7 @@ public class PlayerController : MonoBehaviour
                 rb.MoveRotation(targetRotation * deltaRotation);
             }
 
-            Debug.Log(rb.angularVelocity);
+            //Debug.Log(rb.angularVelocity);
         }
         else
         {
@@ -161,15 +163,30 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    public void TakeDamage()
+    public void TakeDamage(int amount)
     {
         Debug.Log("YOU GOT HIT");
+        canTakeDamage = false;
+        noise.enabled = true;
+        Invoke(nameof(NoiseReset), 0.2f);
+        Invoke(nameof(DamageReset), 1f);
+        health.TakeDamage(amount);
     }
 
     void ResetJump()
     {
         if (exitingSlope) exitingSlope = false;
         canJump = true;
+    }
+
+    void NoiseReset()
+    {
+        noise.enabled = false;
+    }
+
+    void DamageReset()
+    {
+        canTakeDamage = true;
     }
 
     bool OnSlope()

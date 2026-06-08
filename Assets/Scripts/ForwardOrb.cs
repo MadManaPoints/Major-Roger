@@ -24,7 +24,9 @@ public class ForwardOrb : MonoBehaviour
     {
         if (col.gameObject.CompareTag("Player"))
         {
-            col.gameObject.GetComponent<PlayerController>().TakeDamage();
+            PlayerController player = col.gameObject.GetComponent<PlayerController>();
+            if (player.canTakeDamage) player.TakeDamage(50);
+            lifespan = 2.5f;
             gameObject.SetActive(false);
         }
     }
