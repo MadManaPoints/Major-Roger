@@ -435,13 +435,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.03944908, y: 0.9312846, z: -0.34625915, w: -0.106100656}
+  m_LocalRotation: {x: -0.03944905, y: 0.93128467, z: -0.3462591, w: -0.10610061}
   m_LocalPosition: {x: 0.65890473, y: 5.0276732, z: 2.8541903}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1658471605}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 40.791, y: -166.98, z: 0}
 --- !u!114 &330585547
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1180,6 +1180,7 @@ GameObject:
   - component: {fileID: 719192743}
   - component: {fileID: 719192744}
   - component: {fileID: 719192742}
+  - component: {fileID: 719192745}
   m_Layer: 0
   m_Name: Third Person Cam
   m_TagString: Untagged
@@ -1195,7 +1196,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 719192738}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.039449085, y: 0.9312846, z: -0.34625915, w: -0.106100656}
+  m_LocalRotation: {x: -0.039449055, y: 0.93128467, z: -0.3462591, w: -0.10610061}
   m_LocalPosition: {x: 0.65890473, y: 5.0276732, z: 2.8541903}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -1412,6 +1413,29 @@ MonoBehaviour:
   AmplitudeGain: 1.4
   FrequencyGain: 0.1
   m_NoiseOffsets: {x: 0, y: 0, z: 0}
+--- !u!114 &719192745
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 719192738}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5eb80d8e62d9d145bb50fb783c0f731, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineTargetGroup
+  PositionMode: 0
+  RotationMode: 0
+  UpdateMethod: 2
+  Targets:
+  - Object: {fileID: 2083950419}
+    Weight: 1
+    Radius: 2
+  - Object: {fileID: 1577341782}
+    Weight: 1
+    Radius: 2
+  m_LegacyTargets: []
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -1732,11 +1756,18 @@ MonoBehaviour:
   isAiming: 0
   camOrientation: {fileID: 330585546}
   rotationComposer: {fileID: 719192743}
+  orbitalFollow: {fileID: 719192741}
+  noise: {fileID: 719192744}
+  cinemachineController: {fileID: 719192742}
   isGround:
     serializedVersion: 2
     m_Bits: 1048576
   grounded: 1
   maxSlopeAngle: 60
+  health: {fileID: 0}
+  canTakeDamage: 1
+  lockOnTarget: {fileID: 1577341782}
+  lockedOn: 0
 --- !u!54 &1385906177
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -2464,6 +2495,15 @@ MonoBehaviour:
     m_Type: 0
     m_ExpectedControlType: 
     m_Id: 8fc13768-3c6e-4caf-8384-23af7854ca16
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings: []
+    m_Flags: 0
+  _lockOn:
+    m_Name: 
+    m_Type: 0
+    m_ExpectedControlType: 
+    m_Id: 6b0e49e3-5bda-471c-8b39-53025ea9854d
     m_Processors: 
     m_Interactions: 
     m_SingletonActionBindings: []
