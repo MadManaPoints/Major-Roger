@@ -47,7 +47,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] Transform aimTarget;
     [SerializeField] Transform opp;
     public bool lockedOn;
-
+    bool shooting;
+    PlayerShoot gun;
 
     void Awake()
     {
@@ -63,6 +64,8 @@ public class PlayerController : MonoBehaviour
 
         rb = GetComponent<Rigidbody>();
         health = GetComponent<PlayerHealth>();
+        gun = GetComponent<PlayerShoot>();
+
 
         angularVelocity = new Vector3(0f, 100f, 0f);
 
@@ -71,8 +74,6 @@ public class PlayerController : MonoBehaviour
 
         rotationComposer.Composition.DeadZone.Enabled = true;
 
-        //Time.timeScale = 0.1f;
-        //Time.fixedDeltaTime = 0.02f * Time.timeScale;
     }
 
     public void PlayerMove(float verticalInput, float horizontalInput)
@@ -100,6 +101,11 @@ public class PlayerController : MonoBehaviour
         GroundCheck();
         //Debug.Log(isAiming);
         if (Input.GetKeyDown(KeyCode.T)) isAiming = !isAiming;
+
+        if (shooting)
+        {
+            gun.Fire();
+        }
     }
 
     void Movement()
@@ -133,8 +139,8 @@ public class PlayerController : MonoBehaviour
     {
         if (moveDirection != Vector3.zero && !isAiming && !lockedOn)
         {
-            if (cinemachineCam.LookAt != aimTarget) cinemachineCam.LookAt = aimTarget; // Reset aim target
-            if (!cinemachineController.enabled) cinemachineController.enabled = true; // Reset controller input
+            //if (cinemachineCam.LookAt != aimTarget) cinemachineCam.LookAt = aimTarget; // Reset aim target
+            //if (!cinemachineController.enabled) cinemachineController.enabled = true; // Reset controller input
             if (!rotationComposer.enabled) rotationComposer.enabled = true; // Reset rotation 
             if (!rotationComposer.Composition.DeadZone.Enabled) rotationComposer.Composition.DeadZone.Enabled = true;
 
@@ -144,8 +150,8 @@ public class PlayerController : MonoBehaviour
         }
         else if (lockedOn)
         {
-            if (cinemachineController.enabled) cinemachineController.enabled = false; // Prevent controller input for camera
-            if (cinemachineCam.LookAt != lockOnTarget) cinemachineCam.LookAt = lockOnTarget; // Apply lock-on based on group cam
+            //if (cinemachineController.enabled) cinemachineController.enabled = false; // Prevent controller input for camera
+            //if (cinemachineCam.LookAt != lockOnTarget) cinemachineCam.LookAt = lockOnTarget; // Apply lock-on based on group cam
 
             if (isAiming)
             {
@@ -170,8 +176,8 @@ public class PlayerController : MonoBehaviour
         }
         else if (isAiming && !lockedOn)
         {
-            if (cinemachineCam.LookAt != aimTarget) cinemachineCam.LookAt = aimTarget; // Reset aim target
-            if (!cinemachineController.enabled) cinemachineController.enabled = true; // Reset controller input
+            //if (cinemachineCam.LookAt != aimTarget) cinemachineCam.LookAt = aimTarget; // Reset aim target
+            //if (!cinemachineController.enabled) cinemachineController.enabled = true; // Reset controller input
 
             if (rotationComposer.Composition.DeadZone.Enabled) rotationComposer.Composition.DeadZone.Enabled = false;
 
@@ -187,8 +193,8 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
-            if (cinemachineCam.LookAt != aimTarget) cinemachineCam.LookAt = aimTarget; // Reset aim target
-            if (!cinemachineController.enabled) cinemachineController.enabled = true; // Reset controller input
+            //if (cinemachineCam.LookAt != aimTarget) cinemachineCam.LookAt = aimTarget; // Reset aim target
+            //if (!cinemachineController.enabled) cinemachineController.enabled = true; // Reset controller input
             if (!rotationComposer.enabled) rotationComposer.enabled = true; // Reset rotation
             if (!rotationComposer.Composition.DeadZone.Enabled) rotationComposer.Composition.DeadZone.Enabled = true;
 
@@ -196,7 +202,10 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-
+    public void Shoot()
+    {
+        shooting = !shooting;
+    }
 
     void GroundCheck()
     {

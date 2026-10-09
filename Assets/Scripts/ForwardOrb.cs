@@ -22,7 +22,7 @@ public class ForwardOrb : MonoBehaviour
 
     void OnTriggerEnter(Collider col)
     {
-        if (col.gameObject.CompareTag("Player"))
+        if (col.transform.CompareTag("Player"))
         {
             PlayerController player = col.gameObject.GetComponent<PlayerController>();
             if (player.canTakeDamage) player.TakeDamage(50);
