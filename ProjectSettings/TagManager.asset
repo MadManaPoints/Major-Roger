@@ -5,6 +5,8 @@ TagManager:
   serializedVersion: 3
   tags:
   - Opp
+  - Bullet
+  - Bazooka
   layers:
   - Default
   - TransparentFX
@@ -31,7 +33,7 @@ TagManager:
   - 
   - 
   - 
-  - 
+  - Opp
   - 
   - 
   - 

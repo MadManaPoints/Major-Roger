@@ -8,6 +8,8 @@ public class PlayerATB : MonoBehaviour
     RectTransform[] rt = new RectTransform[3];
     float currentProgress = 0f;
     float maxProgress = 300f;
+
+    public int numOfAttacks = 0;
     void Start()
     {
         for (int i = 0; i < ATB.Count; i++)
@@ -40,18 +42,37 @@ public class PlayerATB : MonoBehaviour
         rt[1].sizeDelta = new Vector2(ATB2, rt[1].sizeDelta.y);
         rt[2].sizeDelta = new Vector2(ATB3, rt[2].sizeDelta.y);
 
-        if (Input.GetKeyDown(KeyCode.T)) AbilityTest();
-    }
-
-    void AbilityTest()
-    {
-        if (currentProgress >= 100f)
+        if (currentProgress == maxProgress)
         {
-            currentProgress -= 100f;
+            numOfAttacks = 3;
+        }
+        else if (currentProgress >= 200f)
+        {
+            numOfAttacks = 2;
+        }
+        else if (currentProgress >= 100f)
+        {
+            numOfAttacks = 1;
         }
         else
         {
-            currentProgress = 0f;
+            numOfAttacks = 0;
+        }
+    }
+
+    public void FillATB(float pointsToAdd)
+    {
+        if (currentProgress + pointsToAdd >= maxProgress)
+            currentProgress = maxProgress;
+        else
+            currentProgress += pointsToAdd;
+    }
+
+    public void RemoveATB(float pointsToUse)
+    {
+        if (currentProgress >= pointsToUse)
+        {
+            currentProgress -= pointsToUse;
         }
     }
 

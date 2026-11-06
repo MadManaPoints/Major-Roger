@@ -1,5 +1,6 @@
 using UnityEngine;
 using Unity.Cinemachine;
+using System.Collections;
 using System.Collections.Generic;
 
 public class PlayerController : MonoBehaviour
@@ -25,7 +26,7 @@ public class PlayerController : MonoBehaviour
     public Transform camOrientation; // Grab orientation for rotation
     [SerializeField] CinemachineRotationComposer rotationComposer;
     [SerializeField] CinemachineOrbitalFollow orbitalFollow;
-    [SerializeField] CinemachineBasicMultiChannelPerlin noise;
+    [SerializeField] CinemachineBasicMultiChannelPerlin[] noise;
     [SerializeField] CinemachineInputAxisController cinemachineController;
     [SerializeField] CinemachineCamera cinemachineCam;
     float yRotation, xRotation;
@@ -49,6 +50,7 @@ public class PlayerController : MonoBehaviour
     public bool lockedOn;
     bool shooting;
     PlayerShoot gun;
+    PlayerATB ATB;
 
     void Awake()
     {
@@ -64,8 +66,8 @@ public class PlayerController : MonoBehaviour
 
         rb = GetComponent<Rigidbody>();
         health = GetComponent<PlayerHealth>();
+        ATB = GetComponent<PlayerATB>();
         gun = GetComponent<PlayerShoot>();
-
 
         angularVelocity = new Vector3(0f, 100f, 0f);
 
@@ -73,7 +75,6 @@ public class PlayerController : MonoBehaviour
         addedGravity = Physics.gravity.y * 4.2f;
 
         rotationComposer.Composition.DeadZone.Enabled = true;
-
     }
 
     public void PlayerMove(float verticalInput, float horizontalInput)
@@ -92,20 +93,18 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (!playerControl) return;
         Movement();
         Rotation();
     }
 
     void Update()
     {
+        if (!playerControl) return;
         GroundCheck();
         //Debug.Log(isAiming);
-        if (Input.GetKeyDown(KeyCode.T)) isAiming = !isAiming;
 
-        if (shooting)
-        {
-            gun.Fire();
-        }
+        if (shooting) gun.Fire();
     }
 
     void Movement()
@@ -130,8 +129,8 @@ public class PlayerController : MonoBehaviour
         if (jumpRequested)
         {
             jumpRequested = false;
-            Debug.Log(strafeJumpDirection);
-            rb.AddForce((Vector3.up + strafeJumpDirection) * jumpForce, ForceMode.Impulse);
+            //Debug.Log(strafeJumpDirection);
+            rb.AddForce((Vector3.up * 0.7f + strafeJumpDirection) * jumpForce * 1.4f, ForceMode.Impulse);
         }
     }
 
@@ -207,6 +206,37 @@ public class PlayerController : MonoBehaviour
         shooting = !shooting;
     }
 
+    public void SpecialAttack()
+    {
+        if (ATB.numOfAttacks == 0) return;
+        StartCoroutine(Bazooka());
+        ATB.RemoveATB(100f);
+    }
+
+    IEnumerator Bazooka()
+    {
+        playerControl = false;
+        rb.isKinematic = true;
+        yield return new WaitForSeconds(0.8f);
+
+        rb.isKinematic = false;
+        Invoke(nameof(ReturnPlayerControl), 0.75f);
+        waitForStrafeJump = true;
+        gun.Bazooka();
+        rb.AddForce((Vector3.up * 0.8f + -transform.forward * 0.8f) * jumpForce, ForceMode.Impulse);
+    }
+
+    public void UpdateATB(float points)
+    {
+        ATB.FillATB(points);
+    }
+
+    void ReturnPlayerControl()
+    {
+        playerControl = true;
+        waitForStrafeJump = false;
+    }
+
     void GroundCheck()
     {
         // Ground check 
@@ -238,14 +268,14 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    public void TakeDamage(int amount)
+    public void TakeDamage(int hitPoints)
     {
         Debug.Log("YOU GOT HIT");
         canTakeDamage = false;
-        noise.enabled = true;
-        Invoke(nameof(NoiseReset), 0.2f);
+        for (int i = 0; i < noise.Length; i++) noise[i].enabled = true;
+        Invoke(nameof(NoiseReset), 3f);
         Invoke(nameof(DamageReset), 1f);
-        health.TakeDamage(amount);
+        health.TakeDamage(hitPoints);
     }
 
     void ResetJump()
@@ -258,7 +288,7 @@ public class PlayerController : MonoBehaviour
 
     void NoiseReset()
     {
-        noise.enabled = false;
+        for (int i = 0; i < noise.Length; i++) noise[i].enabled = false;
     }
 
     void DamageReset()
