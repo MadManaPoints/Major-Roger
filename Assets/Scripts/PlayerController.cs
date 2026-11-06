@@ -1,5 +1,7 @@
 using UnityEngine;
 using Unity.Cinemachine;
+using System.Collections;
+using System.Collections.Generic;
 
 public class PlayerController : MonoBehaviour
 {
@@ -11,7 +13,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] float airMult;
     [SerializeField] float jumpForce;
     public bool canJump;
-    bool jumpRequested;
+    bool jumpRequested, waitForStrafeJump;
+    Vector3 strafeJumpDirection = Vector3.zero;
     float gravity, addedGravity;
     float strafeMovementAirDamp = 1f;
     Rigidbody rb;
@@ -22,7 +25,10 @@ public class PlayerController : MonoBehaviour
     public bool isAiming;
     public Transform camOrientation; // Grab orientation for rotation
     [SerializeField] CinemachineRotationComposer rotationComposer;
-    [SerializeField] CinemachineBasicMultiChannelPerlin noise;
+    [SerializeField] CinemachineOrbitalFollow orbitalFollow;
+    [SerializeField] CinemachineBasicMultiChannelPerlin[] noise;
+    [SerializeField] CinemachineInputAxisController cinemachineController;
+    [SerializeField] CinemachineCamera cinemachineCam;
     float yRotation, xRotation;
     [Header("Ground Check")]
     [SerializeField] LayerMask isGround;
@@ -36,7 +42,15 @@ public class PlayerController : MonoBehaviour
     [Header("Other References")]
     [SerializeField] PlayerHealth health;
     public bool canTakeDamage = true;
-
+    [Space(15)]
+    [Header("Targeting")]
+    [SerializeField] Transform lockOnTarget;
+    [SerializeField] Transform aimTarget;
+    [SerializeField] Transform opp;
+    public bool lockedOn;
+    bool shooting;
+    PlayerShoot gun;
+    PlayerATB ATB;
 
     void Awake()
     {
@@ -52,6 +66,8 @@ public class PlayerController : MonoBehaviour
 
         rb = GetComponent<Rigidbody>();
         health = GetComponent<PlayerHealth>();
+        ATB = GetComponent<PlayerATB>();
+        gun = GetComponent<PlayerShoot>();
 
         angularVelocity = new Vector3(0f, 100f, 0f);
 
@@ -77,15 +93,18 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (!playerControl) return;
         Movement();
         Rotation();
     }
 
     void Update()
     {
+        if (!playerControl) return;
         GroundCheck();
         //Debug.Log(isAiming);
-        if (Input.GetKeyDown(KeyCode.T)) isAiming = !isAiming;
+
+        if (shooting) gun.Fire();
     }
 
     void Movement()
@@ -105,25 +124,60 @@ public class PlayerController : MonoBehaviour
         }
 
         Vector3 v = grounded && !isAiming ? move : new Vector3(move.x * airMult, rb.linearVelocity.y, move.z * airMult);
-        rb.AddForce(v - rb.linearVelocity, ForceMode.VelocityChange);
+        if (!waitForStrafeJump) rb.AddForce(v - rb.linearVelocity, ForceMode.VelocityChange);
 
         if (jumpRequested)
         {
             jumpRequested = false;
-            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            //Debug.Log(strafeJumpDirection);
+            rb.AddForce((Vector3.up * 0.7f + strafeJumpDirection) * jumpForce * 1.4f, ForceMode.Impulse);
         }
     }
 
     void Rotation()
     {
-        if (moveDirection != Vector3.zero && !isAiming)
+        if (moveDirection != Vector3.zero && !isAiming && !lockedOn)
         {
+            //if (cinemachineCam.LookAt != aimTarget) cinemachineCam.LookAt = aimTarget; // Reset aim target
+            //if (!cinemachineController.enabled) cinemachineController.enabled = true; // Reset controller input
+            if (!rotationComposer.enabled) rotationComposer.enabled = true; // Reset rotation 
             if (!rotationComposer.Composition.DeadZone.Enabled) rotationComposer.Composition.DeadZone.Enabled = true;
+
+            // Get rotation based on movement
             float angleDiff = Vector3.SignedAngle(transform.forward, moveDirection, Vector3.up);
             rb.angularVelocity = new Vector3(rb.angularVelocity.x, angleDiff * 0.15f, rb.angularVelocity.z);
         }
-        else if (isAiming)
+        else if (lockedOn)
         {
+            //if (cinemachineController.enabled) cinemachineController.enabled = false; // Prevent controller input for camera
+            //if (cinemachineCam.LookAt != lockOnTarget) cinemachineCam.LookAt = lockOnTarget; // Apply lock-on based on group cam
+
+            if (isAiming)
+            {
+                // Get rotation based on lock-on target
+                Vector3 direction = opp.position - transform.position; // Get target direction
+                Quaternion targetRotation = Quaternion.LookRotation(new Vector3(direction.x, 0f, direction.z));
+                Quaternion deltaRotation = Quaternion.Euler(angularVelocity * Time.fixedDeltaTime);
+
+                if (Quaternion.Angle(rb.rotation, targetRotation) > 0.1f)
+                {
+                    rb.MoveRotation(targetRotation * deltaRotation); // Rotate toward target
+                }
+            }
+            else
+            {
+                // Get rotation based on movement
+                float angleDiff = Vector3.SignedAngle(transform.forward, moveDirection, Vector3.up);
+                rb.angularVelocity = new Vector3(rb.angularVelocity.x, angleDiff * 0.15f, rb.angularVelocity.z);
+            }
+            //if (rotationComposer.enabled) rotationComposer.enabled = false;
+            //if (orbitalFollow.enabled) orbitalFollow.enabled = false;
+        }
+        else if (isAiming && !lockedOn)
+        {
+            //if (cinemachineCam.LookAt != aimTarget) cinemachineCam.LookAt = aimTarget; // Reset aim target
+            //if (!cinemachineController.enabled) cinemachineController.enabled = true; // Reset controller input
+
             if (rotationComposer.Composition.DeadZone.Enabled) rotationComposer.Composition.DeadZone.Enabled = false;
 
             Quaternion deltaRotation = Quaternion.Euler(angularVelocity * Time.fixedDeltaTime);
@@ -131,17 +185,56 @@ public class PlayerController : MonoBehaviour
 
             if (Quaternion.Angle(rb.rotation, targetRotation) > 0.1f)
             {
-                rb.MoveRotation(targetRotation * deltaRotation);
+                rb.MoveRotation(targetRotation * deltaRotation); // Rotate toward camera direction
             }
 
             //Debug.Log(rb.angularVelocity);
         }
         else
         {
+            //if (cinemachineCam.LookAt != aimTarget) cinemachineCam.LookAt = aimTarget; // Reset aim target
+            //if (!cinemachineController.enabled) cinemachineController.enabled = true; // Reset controller input
+            if (!rotationComposer.enabled) rotationComposer.enabled = true; // Reset rotation
             if (!rotationComposer.Composition.DeadZone.Enabled) rotationComposer.Composition.DeadZone.Enabled = true;
 
             rb.angularVelocity = Vector3.zero;
         }
+    }
+
+    public void Shoot()
+    {
+        shooting = !shooting;
+    }
+
+    public void SpecialAttack()
+    {
+        if (ATB.numOfAttacks == 0) return;
+        StartCoroutine(Bazooka());
+        ATB.RemoveATB(100f);
+    }
+
+    IEnumerator Bazooka()
+    {
+        playerControl = false;
+        rb.isKinematic = true;
+        yield return new WaitForSeconds(0.8f);
+
+        rb.isKinematic = false;
+        Invoke(nameof(ReturnPlayerControl), 0.75f);
+        waitForStrafeJump = true;
+        gun.Bazooka();
+        rb.AddForce((Vector3.up * 0.8f + -transform.forward * 0.8f) * jumpForce, ForceMode.Impulse);
+    }
+
+    public void UpdateATB(float points)
+    {
+        ATB.FillATB(points);
+    }
+
+    void ReturnPlayerControl()
+    {
+        playerControl = true;
+        waitForStrafeJump = false;
     }
 
     void GroundCheck()
@@ -149,6 +242,7 @@ public class PlayerController : MonoBehaviour
         // Ground check 
         grounded = Physics.BoxCast(transform.position, transform.localScale * 0.25f, Vector3.down, out floorHit, transform.rotation, 1.05f, isGround);
         if (grounded && Physics.gravity.y != gravity) Physics.gravity = new Vector3(0f, gravity, 0f);
+        if (grounded && waitForStrafeJump) waitForStrafeJump = false;
         //Debug.DrawLine(transform.position, new Vector3(transform.position.x, transform.position.y - 1.2f, transform.position.z), Color.magenta);
     }
 
@@ -163,30 +257,48 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    public void TakeDamage(int amount)
+    public void StrafeJump(Vector3 directionToJump)
+    {
+        if (grounded)
+        {
+            canJump = false;
+            strafeJumpDirection = directionToJump;
+            jumpRequested = true;
+            Invoke(nameof(ResetJump), 0.2f);
+        }
+    }
+
+    public void TakeDamage(int hitPoints)
     {
         Debug.Log("YOU GOT HIT");
         canTakeDamage = false;
-        noise.enabled = true;
-        Invoke(nameof(NoiseReset), 0.2f);
+        for (int i = 0; i < noise.Length; i++) noise[i].enabled = true;
+        Invoke(nameof(NoiseReset), 3f);
         Invoke(nameof(DamageReset), 1f);
-        health.TakeDamage(amount);
+        health.TakeDamage(hitPoints);
     }
 
     void ResetJump()
     {
         if (exitingSlope) exitingSlope = false;
+        if (strafeJumpDirection != Vector3.zero) strafeJumpDirection = Vector3.zero;
+        waitForStrafeJump = true;
         canJump = true;
     }
 
     void NoiseReset()
     {
-        noise.enabled = false;
+        for (int i = 0; i < noise.Length; i++) noise[i].enabled = false;
     }
 
     void DamageReset()
     {
         canTakeDamage = true;
+    }
+
+    void StrafeReset()
+    {
+
     }
 
     bool OnSlope()

@@ -11,7 +11,7 @@ public class CircularOrbs : MonoBehaviour
     float orbCooldown = 2.8f;
     void Start()
     {
-        // Loop through list of pooled objects,deactivating them and adding them to the list 
+        // Loop through list of pooled objects, deactivating them and adding them to the list 
         pooledOrbs = new List<GameObject>();
         for (int i = 0; i < numberToPool; i++)
         {
@@ -20,7 +20,7 @@ public class CircularOrbs : MonoBehaviour
             obj.transform.position = transform.position;
             obj.SetActive(false);
             pooledOrbs.Add(obj);
-            obj.transform.SetParent(this.transform); // set as children of Spawn Manager
+            obj.transform.SetParent(this.transform.GetChild(0)); // set as children of Spawn Manager
         }
     }
 
@@ -40,7 +40,7 @@ public class CircularOrbs : MonoBehaviour
             }
             else
             {
-                orbCooldown = 2.8f;
+                orbCooldown = 2.1f;
                 orbsActive = false;
             }
         }
